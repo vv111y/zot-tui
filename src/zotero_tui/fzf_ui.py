@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+import os
+import shlex
+import subprocess
+from typing import Iterable, List, Optional, Sequence, Tuple
+
+from pyfzf.pyfzf import FzfPrompt
+
+
+def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> List[str]:
+    opts: List[str] = ["--ansi", "--multi", "--height", "80%", "--border", "--layout=reverse"]
+    if preview_command:
+        opts += ["--preview", preview_command]
+        opts += ["--preview-window", "right:60%:wrap"]
+    if expect_keys:
+        opts += ["--expect", ",".join(expect_keys)]
+    return opts
+
+
+def prompt(entries: Sequence[str], preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> Tuple[Optional[str], List[str]]:
+    """Prompt with fzf and optional preview and hotkeys.
+
+    Returns a tuple (pressed_key, selected_lines).
+    pressed_key is None when Enter was used without --expect.
+    """
+    fzf = FzfPrompt()
+    options = _build_fzf_options(preview_command=preview_command, expect_keys=expect_keys)
+    res = fzf.prompt(entries, fzf_options=options)
+    if expect_keys:
+        # When --expect is used, pyfzf returns [key, selection1, selection2, ...]
+        if not res:
+            return None, []
+        key = res[0] if res and res[0] in (expect_keys or []) else None
+        selections = res[1:] if key else res
+        return key, selections
+    else:
+        return None, res

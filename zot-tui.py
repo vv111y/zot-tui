@@ -1,4 +1,33 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+"""Deprecated shim for the previous prototype.
+
+Use the new CLI instead:
+  - zotero-tui all
+  - zotero-tui by-collection
+"""
+
+def main() -> None:
+    print("This script is deprecated. Please use the `zotero-tui` CLI (pipx install .).")
+
+
+if __name__ == "__main__":
+    main()
+#!/usr/bin/env python3
+
+"""Deprecated shim for the previous prototype.
+
+Use the new CLI instead:
+    - zotero-tui all
+    - zotero-tui by-collection
+"""
+
+def main() -> None:
+        print("This script is deprecated. Please use the `zotero-tui` CLI (pipx install .).")
+
+
+if __name__ == "__main__":
+        main()
 
 import sqlite3
 from pyfzf.pyfzf import FzfPrompt
