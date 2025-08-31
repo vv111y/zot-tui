@@ -5,6 +5,7 @@ import re
 import subprocess
 from pathlib import Path
 from typing import List, Optional
+import shutil
 
 from . import db
 from .fzf_ui import prompt
@@ -175,6 +176,12 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
         (f"Modified: {date_modified}" if date_modified else "Modified: -"),
         f"DOI: {doi if doi else '-'}",
         f"URL: {url if url else '-'}",
+    ]
+    # Abstract near the top for quick reading
+    lines += [
+        "",
+        "Abstract:",
+        abstract if abstract else "  - (none)",
         "",
         "Creators:",
     ]
@@ -209,14 +216,22 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
             lines.append(f"  - {p}{suffix}{mark}")
     else:
         lines.append("  - (none)")
-    # Abstract at the end
-    lines.append("")
-    lines.append("Abstract:")
-    if abstract:
-        lines.append(abstract)
-    else:
-        lines.append("  - (none)")
     return "\n".join(lines)
+
+
+def _page_text(text: str) -> None:
+    """Page the given text through bat (if available) or less, preserving ANSI colors."""
+    bat = shutil.which("bat") or shutil.which("batcat")
+    try:
+        if bat:
+            subprocess.run([bat, "--paging=always", "--style=plain"], input=text.encode(), check=False)
+        else:
+            pager = os.environ.get("PAGER") or "less"
+            # -R to pass through raw control chars for ANSI colors
+            subprocess.run([pager, "-R"], input=text.encode(), check=False)
+    except Exception:
+        # Fallback: print to stdout
+        print(text)
 
 
 def workflow_whole_library(con) -> Optional[int]:
@@ -285,6 +300,11 @@ def workflow_by_collection(con) -> Optional[int]:
     chosen_item_id = parse_item_id_from_line(item_sel[0])
     if chosen_item_id is None:
         return None
+    if key == "enter":
+        # Show the full entry in a pager
+        full = _preview_for_item_sqlite(con, chosen_item_id)
+        _page_text(full)
+        return chosen_item_id
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, chosen_item_id)
         existing = [p for p in atts if Path(p).exists()]
@@ -369,6 +389,10 @@ def ui_all(con) -> tuple[Optional[str], Optional[str]]:
     item_id = parse_item_id_from_line(selection[0])
     if item_id is None:
         return key, None
+    if key == "enter":
+        full = _preview_for_item_sqlite(con, item_id)
+        _page_text(full)
+        return key, None
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)
         existing = [p for p in atts if Path(p).exists()]
@@ -418,6 +442,10 @@ def ui_by_collection(con) -> tuple[Optional[str], Optional[str]]:
             chosen_item_id = parse_item_id_from_line(item_sel[0])
             if chosen_item_id is None:
                 return key2, None
+            if key2 == "enter":
+                full = _preview_for_item_sqlite(con, chosen_item_id)
+                _page_text(full)
+                return key2, None
             if key2 in ("ctrl-o", "alt-o"):
                 atts = db.fetch_attachments_for_item(con, chosen_item_id)
                 existing = [p for p in atts if Path(p).exists()]
@@ -455,6 +483,10 @@ def ui_query(con) -> tuple[Optional[str], Optional[str]]:
         return key, None
     item_id = parse_item_id_from_line(selection[0])
     if item_id is None:
+        return key, None
+    if key == "enter":
+        full = _preview_for_item_sqlite(con, item_id)
+        _page_text(full)
         return key, None
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)

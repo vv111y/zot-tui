@@ -1138,6 +1138,37 @@ we might filter,  but let's try having the TUI take up the whole window, maybe I
 
 _**Assistant**_
 
+Updating fzf UI options to use full terminal height and a wider preview pane for better visibility of metadata-heavy entries. 
+```
+
+```
+I’ll make the UI full-screen and widen the preview so info-heavy entries fit better.
+
+Changes
+- Full-screen TUI: fzf now uses height 100% instead of 80%.
+- Wider preview: preview pane expanded to 70% width with wrap, so more metadata is visible.
+
+Files updated
+- `fzf_ui.py` — adjusted fzf options: height 100%, preview-window right:70%:wrap.
+
+How to use
+- Run zotero-tui; the UI will occupy the full terminal and show a larger preview pane. Use Ctrl-S to toggle query, Ctrl-C collections, Ctrl-O/Alt-O to open attachments, Ctrl-Q to quit.
+
+If you want a toggle for preview width or full screen at runtime, I can add keybinds or a config flag next.
+
+---
+
+_**User**_
+
+better
+
+1. put abstract near the top, after URL: as quick abstract reading is useful
+2. pressing enter on an entry opens it to bat or less display of the whole entry, all info
+
+---
+
+_**Assistant**_
+
 
 
 ---
