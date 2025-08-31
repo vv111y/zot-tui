@@ -455,6 +455,195 @@ keep going
 
 _**Assistant**_
 
+I'll enhance attachment path normalization and cross-platform "open", add an alt-o key to choose among multiple attachments, update docs/TODO, run tests, and commit. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Continuing the build-out, I improved attachment handling, added a chooser hotkey, updated docs, ran tests, and committed.
+
+Checklist
+- Better attachment path normalization
+- Cross-platform open behavior
+- Hotkey to choose among multiple attachments
+- Docs/TODO updates
+- Tests pass
+- Commit changes
+
+## what’s new
+
+- Attachment paths
+  - Normalize attachments:/storage: and tilde/env to absolute paths, using the Zotero DB’s data dir
+- Open behavior
+  - macOS: open
+  - Linux: xdg-open
+  - Windows: start
+- Hotkeys
+  - Ctrl-O: open first attachment
+  - Alt-O: choose which attachment to open if there are multiple
+- Docs
+  - README updated to document Alt-O
+  - TODO updated to reflect progress
+- Tests
+  - Existing unit tests still pass
+
+## try it
+
+- Whole library: zotero-tui all
+- By collection: zotero-tui by-collection
+- Metadata search: zotero-tui search "author or title substring"
+- If needed: export ZOTERO_SQLITE="$HOME/Zotero/zotero.sqlite"
+
+## commits
+
+- feat: improve attachment path normalization and cross-platform open; add Alt-O to choose attachment; docs/TODO updated
+
+Next up
+- Add author/year filter flags to the search command
+- Add a small fixture DB for more robust SQL tests
+- Push to GitHub, set PYPI_API_TOKEN secret, tag release when ready
+
+Want me to implement author/year filters and add a minimal test fixture next?
+
+---
+
+_**User**_
+
+do I need to pipx -e . to use? 
+
+---
+
+_**Assistant**_
+
+Short answer: no. You can use either, depending on your goal.
+
+- For normal local use (no live edits): install once
+````bash
+pipx install .
+zotero-tui --help
+````
+
+- For development (pick up code changes without reinstalling): editable
+````bash
+pipx install --editable .
+zotero-tui --help
+````
+
+- After publishing to PyPI:
+````bash
+pipx install zotero-tui
+````
+
+Notes
+- Console scripts are defined in pyproject, so zotero-tui will be on your PATH after install.
+- macOS prerequisite: fzf must be installed
+````bash
+brew install fzf
+````
+- If you used non-editable install and change code, reinstall:
+````bash
+pipx install --force .
+````
+- To remove:
+````bash
+pipx uninstall zotero-tui
+````
+
+If you’re actively iterating, prefer pipx install --editable . for a smoother loop.
+
+---
+
+_**User**_
+
+╰─➤  zotero-tui all
+unknown option: [--ansi,
+╭─will@willmba.local ~/DevWorkspace/1MyTools/zotero-tui ‹3.3.3› ‹main*›
+╰─➤  zotero-tui by-collection
+unknown option: [--ansi,
+
+---
+
+_**Assistant**_
+
+Likely cause: fzf is receiving a Python list literal as options, e.g. "[--ansi, --layout=reverse]". fzf then errors on the first token "[--ansi,".
+
+Quick checks
+- Inspect your env:
+````bash
+echo "$FZF_DEFAULT_OPTS"
+````
+If it looks like [--ansi, --layout=reverse], fix it:
+````bash
+unset FZF_DEFAULT_OPTS
+# or set properly (no brackets/commas)
+export FZF_DEFAULT_OPTS="--ansi --layout=reverse --preview-window=right:60%"
+````
+
+- Verify fzf is installed and recent:
+````bash
+which fzf && fzf --version
+brew install fzf   # if missing on macOS
+````
+
+Code fix (if you pass options to pyfzf)
+Ensure you never pass a list to pyfzf’s fzf_options. Convert lists/tuples to a space-separated string.
+
+````python
+from __future__ import annotations
+from typing import Iterable, Optional
+from pyfzf.pyfzf import FzfPrompt
+
+def _opts_to_str(opts: Optional[Iterable[str] | str]) -> str:
+    if not opts:
+        return ""
+    if isinstance(opts, str):
+        return opts
+    return " ".join(str(o) for o in opts)
+
+def prompt(lines: Iterable[str], opts: Optional[Iterable[str] | str] = None) -> list[str]:
+    fzf = FzfPrompt()
+    return fzf.prompt(list(lines), fzf_options=_opts_to_str(opts))
+````
+
+If you build the --preview command, don’t append fzf options to the preview program. Only pass placeholders/data, e.g.:
+````python
+# ...existing code...
+preview_cmd = "zotero-tui-preview --item-id {+n}"  # example; adjust to your placeholder
+fzf_opts = "--ansi --preview '{}' --preview-window=right:60%".format(preview_cmd)
+fzf.prompt(lines, fzf_options=fzf_opts)
+````
+
+If you want, show me the file where you construct the fzf options/preview and I’ll patch it in place.
+
+---
+
+_**User**_
+
+go ahead and fix, make it impervious to opts if possible, configuring for ourselves in the app
+
+---
+
+_**Assistant**_
+
 
 
 ---

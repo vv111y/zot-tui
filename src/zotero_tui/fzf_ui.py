@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import os
-import shlex
-import subprocess
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 from pyfzf.pyfzf import FzfPrompt
 
 
-def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> List[str]:
-    opts: List[str] = ["--ansi", "--multi", "--height", "80%", "--border", "--layout=reverse"]
+def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> str:
+    tokens: List[str] = ["--ansi", "--multi", "--height", "80%", "--border", "--layout=reverse"]
     if preview_command:
-        opts += ["--preview", preview_command]
-        opts += ["--preview-window", "right:60%:wrap"]
+        tokens += ["--preview", preview_command]
+        tokens += ["--preview-window", "right:60%:wrap"]
     if expect_keys:
-        opts += ["--expect", ",".join(expect_keys)]
-    return opts
+        tokens += [f"--expect={','.join(expect_keys)}"]
+    return " ".join(tokens)
 
 
 def prompt(entries: Sequence[str], preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> Tuple[Optional[str], List[str]]:
@@ -26,7 +24,18 @@ def prompt(entries: Sequence[str], preview_command: Optional[str] = None, expect
     """
     fzf = FzfPrompt()
     options = _build_fzf_options(preview_command=preview_command, expect_keys=expect_keys)
-    res = fzf.prompt(entries, fzf_options=options)
+
+    # Neutralize user's FZF_DEFAULT_OPTS to avoid malformed values affecting our run
+    old_env = os.environ.get("FZF_DEFAULT_OPTS")
+    try:
+        os.environ["FZF_DEFAULT_OPTS"] = ""
+        res = fzf.prompt(entries, fzf_options=options)
+    finally:
+        if old_env is None:
+            os.environ.pop("FZF_DEFAULT_OPTS", None)
+        else:
+            os.environ["FZF_DEFAULT_OPTS"] = old_env
+
     if expect_keys:
         # When --expect is used, pyfzf returns [key, selection1, selection2, ...]
         if not res:
