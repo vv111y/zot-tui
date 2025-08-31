@@ -645,6 +645,45 @@ go ahead and fix, make it impervious to opts if possible, configuring for oursel
 _**Assistant**_
 
 
+```
+
+```
+I’ll make fzf invocations immune to broken user options by sanitizing what we pass and neutralizing FZF_DEFAULT_OPTS inside the app.
+
+What I changed
+- Converted our fzf options to a single space-separated string (no Python list literal)
+- Use --expect=comma,separated to avoid tokenization issues
+- Temporarily clear FZF_DEFAULT_OPTS for each prompt, then restore it afterward
+
+Why this fixes your error
+- Your shell likely had FZF_DEFAULT_OPTS set to something like [--ansi, ...], which fzf interprets literally and fails on “[--ansi,”.
+- We now ignore that env var during our runs and feed fzf valid flags only.
+
+Try now
+- zotero-tui all
+- zotero-tui by-collection
+- zotero-tui search "smith"
+
+Optional: if you want to keep a global FZF_DEFAULT_OPTS for other tools, you still can—zotero-tui now isolates itself from it.
+
+If anything still trips, paste the exact output and I’ll harden it further.
+
+---
+
+_**User**_
+
+╰─➤  zotero-tui all
+unknown option: preview
+
+---
+
+_**Assistant**_
+
+
+```
+
+```
+
 
 ---
 
