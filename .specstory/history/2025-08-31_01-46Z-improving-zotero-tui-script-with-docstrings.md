@@ -946,6 +946,141 @@ sh: -c: line 0: `open /Users/will/Zotero/storage/3U7FBVFS/Taleb - 2018 - (Anti)F
 
 _**Assistant**_
 
+I'll inspect the workspace to see the current files and code structure so I can fix the PDF open quoting, mark missing attachments, and add metadata (bib keys) in the preview. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+I’ll harden opening PDFs (paths with spaces/parentheses), surface “attachment missing,” and show more metadata (item key + citation key) in the preview.
+
+Checklist
+- Fix PDF open when filenames contain parentheses/spaces.
+- Detect missing attachment files; don’t try to open them; indicate “attachment missing”.
+- Show additional metadata in preview: item key and a citation/bib key.
+
+actions taken
+- Robust opener: replaced shell-based open with subprocess calls so filenames with spaces/() work.
+  - macOS: open <path> via subprocess.run(["open", path]).
+  - Linux: subprocess.run(["xdg-open", path]).
+  - Windows: os.startfile (fallback to cmd start).
+  - If an attachment resolves to a directory, you’ll be prompted to choose a file (PDFs first).
+- Missing attachments handling:
+  - Preview now labels attachments as “[missing]” when the file doesn’t exist.
+  - Ctrl-O/Alt-O only act on existing files; if none, it prints “Attachment missing”.
+- Metadata in preview:
+  - Added “Item Key” (Zotero item key).
+  - Added “Citekey:” if present. Heuristics check:
+    - fields: citationKey, tex.citekey, or extra
+    - If stored in Extra, parses lines like “Citation Key: …”, “citekey: …”, or “tex.citekey: …”.
+- Tests: Re-ran existing tests; 2 passed.
+
+files changed
+- `actions.py`
+  - Preview: show Item Key and Citekey; mark “[missing]” on absent files.
+  - Open: new _open_path() uses subprocess without shell; filters for existing paths; provides chooser when needed.
+  - All UI flows (All/Collections/Query): guard opens to existing files and show “Attachment missing” if none.
+
+try it
+- Launch zotero-tui; select an item with a PDF like “(...).pdf”; press Ctrl-O. It should open without the shell syntax error.
+- Look at the preview pane:
+  - It should show Item Key and Citekey (if present).
+  - Attachments list will annotate non-existent files with “[missing]”.
+
+notes
+- Citation key extraction relies on where Better BibTeX stores the key. If your setup uses a different field/table, tell me and I’ll adapt the query.
+- If you’d like more fields in the preview (DOI, URL, abstract), I can add them.
+
+quality gates
+- Lint/Typecheck: no new errors detected in edited files.
+- Unit tests: PASS (2/2).
+- Requirements coverage: 
+  - PDF open fix: Done.
+  - Missing attachment handling: Done (preview marks and open guarded).
+  - Show bib keys: Done (item key + citekey heuristics).
+
+---
+
+_**User**_
+
+If you’d like more fields in the preview (DOI, URL, abstract), I can add them.
+YES
+
+also
+change key binds: C-q quits the app, C-s for query
+
+---
+
+_**Assistant**_
+
+I’m going to update the preview to include DOI, URL, and Abstract, and change keybindings so Ctrl-Q quits and Ctrl-S toggles the query mode, updating headers and logic accordingly. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+
+---
+
+_**User**_
+
+actually, add all the metadata in the preview
+
+also, for missing files [missing] should be bright yellow so it is obvious 
+
+---
+
+_**Assistant**_
+
 
 
 ---

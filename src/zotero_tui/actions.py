@@ -15,10 +15,21 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
     """Render a plain-text metadata preview for an item."""
     # Fetch title (field 110) and maybe creators and year
     cur = con.cursor()
-    # Item key
-    cur.execute("SELECT key FROM items WHERE itemID = ?", (item_id,))
-    item_key_row = cur.fetchone()
-    item_key = item_key_row[0] if item_key_row else ""
+    # Item basics
+    cur.execute(
+        """
+        SELECT i.key, it.typeName, i.dateAdded, i.dateModified
+        FROM items i
+        JOIN itemTypes it ON it.itemTypeID = i.itemTypeID
+        WHERE i.itemID = ?
+        """,
+        (item_id,),
+    )
+    row = cur.fetchone()
+    item_key = row[0] if row else ""
+    item_type = row[1] if row else ""
+    date_added = row[2] if row else ""
+    date_modified = row[3] if row else ""
     cur.execute(
         """
         SELECT v.value AS title
@@ -44,33 +55,37 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
     date_val = cur.fetchone()
     date_val = date_val[0] if date_val else ""
 
-    # Try to locate a citation key (Better BibTeX) if present
-    citekey = ""
+    # Fetch all fields for the item
+    field_rows: List[tuple[str, str]] = []
     try:
         cur.execute(
             """
-            SELECT v.value, f.fieldName
+            SELECT f.fieldName, v.value
             FROM itemData d
             JOIN itemDataValues v ON v.valueID = d.valueID
             JOIN fields f ON f.fieldID = d.fieldID
-            WHERE d.itemID = ? AND f.fieldName IN ('citationKey','tex.citekey','extra')
+            WHERE d.itemID = ?
+            ORDER BY f.fieldName
             """,
             (item_id,),
         )
-        rows = cur.fetchall()
-        fieldmap = {name: val for (val, name) in rows}
-        if "citationKey" in fieldmap:
-            citekey = fieldmap["citationKey"].strip()
-        elif "tex.citekey" in fieldmap:
-            citekey = fieldmap["tex.citekey"].strip()
-        elif "extra" in fieldmap:
-            # Heuristics to parse from the Extra field
-            extra = fieldmap["extra"]
-            m = re.search(r"(?:Citation Key|citekey|tex\.citekey)\s*:?\s*(\S+)", extra, re.IGNORECASE)
-            if m:
-                citekey = m.group(1)
+        field_rows = [(name, val) for (name, val) in cur.fetchall() if val is not None]
     except Exception:
-        pass
+        field_rows = []
+
+    fieldmap = {name: val for (name, val) in field_rows}
+
+    # Try to locate a citation key (Better BibTeX) if present
+    citekey = ""
+    extra = fieldmap.get("extra") or ""
+    if fieldmap.get("citationKey"):
+        citekey = (fieldmap.get("citationKey") or "").strip()
+    elif fieldmap.get("tex.citekey"):
+        citekey = (fieldmap.get("tex.citekey") or "").strip()
+    elif extra:
+        m = re.search(r"(?:Citation Key|citekey|tex\.citekey)\s*:?\s*(\S+)", extra, re.IGNORECASE)
+        if m:
+            citekey = m.group(1)
 
     # creators (authors)
     cur.execute(
@@ -83,10 +98,66 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
         """,
         (item_id,),
     )
+    creators_rows = cur.fetchall()
     creators = [
         f"{ln}, {fn}" if fn else ln
-        for (ln, fn) in cur.fetchall() if (ln or fn)
+        for (ln, fn) in creators_rows if (ln or fn)
     ]
+    # Creators by role
+    cur.execute(
+        """
+        SELECT ct.creatorType, c.lastName, c.firstName
+        FROM itemCreators ic
+        JOIN creators c ON c.creatorID = ic.creatorID
+        JOIN creatorTypes ct ON ct.creatorTypeID = ic.creatorTypeID
+        WHERE ic.itemID = ?
+        ORDER BY ic.orderIndex
+        """,
+        (item_id,),
+    )
+    creators_by_role: dict[str, List[str]] = {}
+    for role, ln, fn in cur.fetchall():
+        name = f"{ln}, {fn}" if fn else (ln or fn or "")
+        if not name:
+            continue
+        creators_by_role.setdefault(role, []).append(name)
+
+    # Pull commonly useful fields
+    doi = (fieldmap.get("DOI") or "").strip()
+    url = (fieldmap.get("url") or "").strip()
+    abstract = (fieldmap.get("abstractNote") or "").strip()
+
+    # Tags
+    tags: List[str] = []
+    try:
+        cur.execute(
+            """
+            SELECT t.name
+            FROM tags t
+            JOIN itemTags it ON it.tagID = t.tagID
+            WHERE it.itemID = ?
+            ORDER BY t.name COLLATE NOCASE
+            """,
+            (item_id,),
+        )
+        tags = [r[0] for r in cur.fetchall() if r and r[0]]
+    except Exception:
+        tags = []
+
+    # Collections for this item (paths)
+    collections_paths: List[str] = []
+    try:
+        cur.execute("SELECT collectionID FROM collectionItems WHERE itemID = ?", (item_id,))
+        coll_ids = [r[0] for r in cur.fetchall()]
+        if coll_ids:
+            all_colls = db.fetch_collections(con)
+            by_id = {c.id: c for c in all_colls}
+            for cid in coll_ids:
+                c = by_id.get(cid)
+                if c:
+                    collections_paths.append(db.build_collection_path(c, all_colls))
+    except Exception:
+        collections_paths = []
 
     # attachments
     attachments = db.fetch_attachments_for_item(con, item_id)
@@ -95,19 +166,54 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
     author_str = "; ".join(creators) if creators else "-"
     lines: List[str] = [
         f"Title: {title}",
+        (f"Item Type: {item_type}" if item_type else "Item Type: -"),
         f"Authors: {author_str}",
         f"Date: {date_val}",
         f"Item Key: {item_key}",
         (f"Citekey: {citekey}" if citekey else "Citekey: -"),
+        (f"Added: {date_added}" if date_added else "Added: -"),
+        (f"Modified: {date_modified}" if date_modified else "Modified: -"),
+        f"DOI: {doi if doi else '-'}",
+        f"URL: {url if url else '-'}",
         "",
-        "Attachments:",
+        "Creators:",
     ]
+    if creators_by_role:
+        for role, names in creators_by_role.items():
+            lines.append(f"  - {role}: {', '.join(names)}")
+    else:
+        lines.append("  - (none)")
+    lines += ["", "Tags:"]
+    if tags:
+        lines.append("  - " + ", ".join(tags))
+    else:
+        lines.append("  - (none)")
+    lines += ["", "Collections:"]
+    if collections_paths:
+        for p in collections_paths:
+            lines.append(f"  - {p}")
+    else:
+        lines.append("  - (none)")
+    lines += ["", "All fields:"]
+    if field_rows:
+        for name, val in field_rows:
+            lines.append(f"  - {name}: {val}")
+    else:
+        lines.append("  - (none)")
+    lines += ["", "Attachments:"]
     if attachments:
         for p in attachments:
             exists = Path(p).exists()
-            mark = "" if exists else " [missing]"
+            mark = "" if exists else " [\x1b[93mmissing\x1b[0m]"
             suffix = "/" if Path(p).is_dir() else ""
             lines.append(f"  - {p}{suffix}{mark}")
+    else:
+        lines.append("  - (none)")
+    # Abstract at the end
+    lines.append("")
+    lines.append("Abstract:")
+    if abstract:
+        lines.append(abstract)
     else:
         lines.append("  - (none)")
     return "\n".join(lines)
@@ -251,11 +357,11 @@ def workflow_search_metadata(con, query: str) -> Optional[int]:
 def ui_all(con) -> tuple[Optional[str], Optional[str]]:
     items = db.fetch_items_fulltext(con)
     lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
-    header = "Mode: All  |  Ctrl-C: Collections  Ctrl-Q: Query  Ctrl-O: Open  Alt-O: Choose"
+    header = "Mode: All  |  Ctrl-C: Collections  Ctrl-S: Query  Ctrl-Q: Quit  Ctrl-O: Open  Alt-O: Choose"
     key, selection = prompt(
         lines,
         preview_command="zotero-tui preview --line {}",
-        expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-c", "ctrl-q"],
+        expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-c", "ctrl-s", "ctrl-q"],
         header=header,
     )
     if not selection:
@@ -285,8 +391,8 @@ def ui_by_collection(con) -> tuple[Optional[str], Optional[str]]:
         for c in colls:
             path = db.build_collection_path(c, colls)
             col_lines.append(f"{path} \x1b[90m[{c.id}]\x1b[0m")
-        header = "Mode: Collections  |  Ctrl-C: All  Ctrl-Q: Query  Enter: Select Collection"
-        key, sel = prompt(col_lines, expect_keys=["enter", "ctrl-c", "ctrl-q"], header=header)
+        header = "Mode: Collections  |  Ctrl-C: All  Ctrl-S: Query  Ctrl-Q: Quit  Enter: Select Collection"
+        key, sel = prompt(col_lines, expect_keys=["enter", "ctrl-c", "ctrl-s", "ctrl-q"], header=header)
         if not sel:
             return key, None
         chosen_coll_id = parse_item_id_from_line(sel[0])
@@ -297,11 +403,11 @@ def ui_by_collection(con) -> tuple[Optional[str], Optional[str]]:
         while True:
             items = db.fetch_item_titles_in_collection(con, chosen_coll_id)
             item_lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
-            header_items = "Mode: Collection Items  |  Ctrl-H: Back to Collections  Ctrl-C: All  Ctrl-Q: Query"
+            header_items = "Mode: Collection Items  |  Ctrl-H: Back to Collections  Ctrl-C: All  Ctrl-S: Query  Ctrl-Q: Quit"
             key2, item_sel = prompt(
                 item_lines,
                 preview_command="zotero-tui preview --line {}",
-                expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-h", "ctrl-c", "ctrl-q"],
+                expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-h", "ctrl-c", "ctrl-s", "ctrl-q"],
                 header=header_items,
             )
             if not item_sel:
@@ -338,11 +444,11 @@ def ui_query(con) -> tuple[Optional[str], Optional[str]]:
         return None, None
     items = db.search_items_by_title_or_author(con, query)
     lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
-    header = "Mode: Query  |  Ctrl-C: Collections  Ctrl-Q: All  Ctrl-O: Open  Alt-O: Choose"
+    header = "Mode: Query  |  Ctrl-C: Collections  Ctrl-S: All  Ctrl-Q: Quit  Ctrl-O: Open  Alt-O: Choose"
     key, selection = prompt(
         lines,
         preview_command="zotero-tui preview --line {}",
-        expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-c", "ctrl-q"],
+        expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-c", "ctrl-s", "ctrl-q"],
         header=header,
     )
     if not selection:

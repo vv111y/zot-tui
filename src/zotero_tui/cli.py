@@ -19,7 +19,7 @@ def _connect(db_path: Optional[str]):
 
 
 def run(db_path: Optional[str] = None):
-    """Interactive TUI. Keys: Ctrl-C toggle collections mode, Ctrl-Q toggle query mode, Ctrl-H back to collections list."""
+    """Interactive TUI. Keys: Ctrl-C toggle collections, Ctrl-S toggle search, Ctrl-Q quit, Ctrl-H back in collections."""
     con = _connect(db_path)
     try:
         mode = "all"  # all | by-collection | search
@@ -40,10 +40,14 @@ def run(db_path: Optional[str] = None):
             if key == "ctrl-c":
                 mode = "by-collection" if mode != "by-collection" else "all"
                 continue
-            # Ctrl-Q toggles query mode on/off
-            if key == "ctrl-q":
+            # Ctrl-S toggles query mode on/off
+            if key == "ctrl-s":
                 mode = "search" if mode != "search" else "all"
                 continue
+
+            # Ctrl-Q now quits
+            if key == "ctrl-q":
+                break
 
             # Exit if no selection and no key
             if key is None:
