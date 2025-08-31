@@ -201,6 +201,107 @@ _**User**_
 
 _**Assistant**_
 
+Got it—I'll turn this prototype into a small, pipx-installable CLI with fzf workflows, a preview pane, and a hotkey to open PDFs, plus a living TODO and clean commits.
+
+Checklist
+- Multiple fzf modes: whole library, by collection, later metadata search
+- Preview pane showing metadata for current selection
+- Hotkey to open associated PDF
+- Package for pipx install, with README and TODO, and git commits
+- Prep for GitHub + PyPI release
+
+## actions taken
+
+- Created a proper Python package (Typer CLI + fzf):
+  - Commands:
+    - zotero-tui all — search entire library by title
+    - zotero-tui by-collection — pick a collection then search its items
+  - Preview pane: shows title, authors, date, and attachments
+  - Hotkey: Ctrl-O opens first attachment (macOS open)
+  - DB path resolution: auto-detects common paths; override with $ZOTERO_SQLITE or --db-path
+- Implemented database helpers:
+  - Collections loading + path building
+  - Titles by collection and across library
+  - Attachment path fetching and normalization (handles “attachments:” into dataDir/storage)
+- Added a thin fzf wrapper with preview and key handling
+- Wrote README and a living TODO (kept updated)
+- Deprecated the old `zot-tui.py` (kept as a safe shim)
+- Initialized git, committed, and cleaned stray editor/temp files
+- Local smoke test: package imports and CLI help work
+
+## files changed
+
+- pyproject.toml — package metadata, dependencies, console scripts
+- src/zotero_tui/cli.py — Typer CLI (all, by-collection, preview helper)
+- src/zotero_tui/actions.py — fzf workflows, preview, hotkey handling
+- src/zotero_tui/db.py — SQLite access + attachment path normalization
+- src/zotero_tui/fzf_ui.py — fzf prompt with preview and hotkeys
+- src/zotero_tui/config.py — DB path detection and env override
+- README.md — usage, install
+- TODO.md — plan and status (kept updated)
+- zot-tui.py — deprecated shim
+- .gitignore — clean repo
+
+## how to run
+
+- Option 1: pipx (after you push to GitHub/PyPI later)
+- Option 2: local editable install (done during smoke test)
+  - Use the venv we set up, or:
+    - pipx install .
+- Usage examples:
+  - zotero-tui all
+  - zotero-tui by-collection
+- If DB auto-detect fails, set:
+  - export ZOTERO_SQLITE="$HOME/Zotero/zotero.sqlite"
+
+Notes
+- Preview extraction parses [itemID] from the selection line.
+- Ctrl-O opens the first attachment; normalization maps “attachments:…” to Zotero’s storage directory where possible.
+
+## next steps
+
+- Author/metadata search workflows (extend queries + display)
+- Improve DB auto-detection across OSes
+- Smarter attachment path handling for more schemes
+- Tests (unit for path builders + SQL fixtures)
+- GitHub Actions: lint/build; publish to PyPI on tags
+- Docs polish and examples
+
+## git and push
+
+- Made two commits:
+  - feat: bootstrap zotero-tui package with CLI, fzf workflows, preview, and TODO
+  - chore: remove editor temp files from repo and .specstory
+- After you set up a remote, you can push:
+  - git remote add origin <your-remote-url>
+  - git push -u origin master
+
+## quality gates
+
+- Build/import: PASS (modules import, CLI help runs)
+- Lint/typecheck: basic hygiene applied; no configured tool yet
+- Tests: none yet (planned in TODO)
+- Smoke: CLI help OK; DB queries not executed here
+
+Requirements coverage
+- Multiple fzf modes: Done (all, by-collection; metadata search Deferred)
+- Preview pane: Done
+- Open PDF via hotkey: Done (Ctrl-O)
+- Package for pipx: Done (pyproject, console scripts)
+- `TODO.md` + commits: Done
+
+Want me to wire GitHub Actions and a first test next?
+
+---
+
+_**User**_
+
+yes
+
+---
+
+_**Assistant**_
+
 
 
 ---

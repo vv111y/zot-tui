@@ -24,7 +24,8 @@ This file tracks plan and progress. Keep updated as we implement.
 - [ ] Robust handling of Zotero storage paths (attachments:... -> absolute path)
 - [ ] Add author/metadata search
 - [ ] Add tests (unit for path builders, SQL queries guarded by fixtures)
-- [ ] Add GitHub Actions: lint, build, publish on tags
+- [x] Add GitHub Actions: lint/tests (CI)
+- [x] Add GitHub Actions: publish on tags (requires PYPI_API_TOKEN secret)
 - [ ] Package docs and usage examples
 - [ ] Migrate any useful logic from `zot-tui.py`, then remove it
 
