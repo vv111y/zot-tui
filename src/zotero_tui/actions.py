@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from . import db
 from .fzf_ui import prompt
+from .utils import parse_item_id_from_line
 
 
 def _preview_for_item_sqlite(con, item_id: int) -> str:
@@ -75,12 +76,7 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
 def workflow_whole_library(con) -> Optional[int]:
     """fzf across all item titles; preview shows metadata; return chosen itemID."""
     items = db.fetch_items_fulltext(con)
-    id_by_line: Dict[str, int] = {}
-    lines: List[str] = []
-    for iid, title in items:
-        line = f"{title} \x1b[90m[{iid}]\x1b[0m"
-        lines.append(line)
-        id_by_line[line] = iid
+    lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
 
     # Build preview command by invoking this module via Python to print preview for the selected line
     # Use our own console preview helper (added in cli.py) to render metadata by item ID
@@ -91,7 +87,9 @@ def workflow_whole_library(con) -> Optional[int]:
     if not selection:
         return None
     chosen_line = selection[0]
-    item_id = id_by_line[chosen_line]
+    item_id = parse_item_id_from_line(chosen_line)
+    if item_id is None:
+        return None
     # If open key pressed, open attachments
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)
@@ -109,26 +107,25 @@ def workflow_by_collection(con) -> Optional[int]:
     """Pick a collection, then pick an item within it. Return itemID."""
     colls = db.fetch_collections(con)
     lines: List[str] = []
-    id_by_line: Dict[str, int] = {}
     for c in colls:
         path = db.build_collection_path(c, colls)
         line = f"{path} \x1b[90m[{c.id}]\x1b[0m"
         lines.append(line)
-        id_by_line[line] = c.id
+    # No mapping needed; parse back the [id]
 
     key, sel = prompt(lines)
     if not sel:
         return None
-    chosen_coll_id = id_by_line[sel[0]]
+    chosen_coll_id = parse_item_id_from_line(sel[0])
+    if chosen_coll_id is None:
+        return None
 
     # Now list items in this collection
     items = db.fetch_item_titles_in_collection(con, chosen_coll_id)
     item_lines: List[str] = []
-    item_id_by_line: Dict[str, int] = {}
     for iid, title in items:
         line = f"{title} \x1b[90m[{iid}]\x1b[0m"
         item_lines.append(line)
-        item_id_by_line[line] = iid
 
     # Reuse the same preview command
     preview_cmd = "zotero-tui preview --line {}"
@@ -136,7 +133,9 @@ def workflow_by_collection(con) -> Optional[int]:
     key, item_sel = prompt(item_lines, preview_command=preview_cmd, expect_keys=["enter", "ctrl-o", "alt-o"]) 
     if not item_sel:
         return None
-    chosen_item_id = item_id_by_line[item_sel[0]]
+    chosen_item_id = parse_item_id_from_line(item_sel[0])
+    if chosen_item_id is None:
+        return None
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, chosen_item_id)
         if atts:
@@ -172,17 +171,14 @@ def _open_path_mac(path: str) -> None:
 def workflow_search_metadata(con, query: str) -> Optional[int]:
     """Search by title/author substrings with preview; Ctrl-O to open PDF."""
     items = db.search_items_by_title_or_author(con, query)
-    id_by_line: Dict[str, int] = {}
-    lines: List[str] = []
-    for iid, title in items:
-        line = f"{title} \x1b[90m[{iid}]\x1b[0m"
-        lines.append(line)
-        id_by_line[line] = iid
+    lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
 
     key, selection = prompt(lines, preview_command="zotero-tui preview --line {}", expect_keys=["enter", "ctrl-o"])
     if not selection:
         return None
-    item_id = id_by_line[selection[0]]
+    item_id = parse_item_id_from_line(selection[0])
+    if item_id is None:
+        return None
     if key == "ctrl-o":
         atts = db.fetch_attachments_for_item(con, item_id)
         if atts:

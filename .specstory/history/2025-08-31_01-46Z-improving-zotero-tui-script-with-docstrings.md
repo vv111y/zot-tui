@@ -684,6 +684,55 @@ _**Assistant**_
 
 ```
 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Thanks for the error detail. I hardened our fzf wrapper so it ignores any user-set FZF_DEFAULT_OPTS and always passes correct options:
+
+What I changed
+- fzf options are now passed as a single, valid string (what pyfzf expects).
+- The preview command is shell-quoted so it’s treated as one argument.
+- During each prompt call, FZF_DEFAULT_OPTS is temporarily cleared and restored afterward.
+
+Why it fixes “unknown option: preview”
+- Previously fzf was likely seeing malformed flags from your environment or tokenized incorrectly; now we isolate and pass a clean option string.
+
+Try it now
+- zotero-tui all
+- zotero-tui by-collection
+- zotero-tui search "smith"
+
+If you still see issues, paste the exact output and I’ll tighten it again.
+
+---
+
+_**User**_
+
+zotero-tui by-collection
+when I selected a collection:
+KeyError: '/Deep Learning/Graph NN [147]'
+
+---
+
+_**Assistant**_
+
+I'll update selection handling to parse the ID from the fzf-selected line (stripping any ANSI), avoiding KeyError, and then commit. 
+```
+
+```
+
+```
+
+```
+
 
 ---
 
