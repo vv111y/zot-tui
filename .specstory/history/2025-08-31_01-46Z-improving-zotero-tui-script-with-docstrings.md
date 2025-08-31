@@ -1082,6 +1082,63 @@ also, for missing files [missing] should be bright yellow so it is obvious
 _**Assistant**_
 
 
+```
+
+```
+I’ll expand the preview to show all useful metadata and update keybinds (Ctrl-Q quits, Ctrl-S toggles query), plus make missing attachments bright yellow.
+
+Checklist
+- Show all metadata in preview (fields, creators with roles, tags, collections, item type/dates).
+- Color [missing] in bright yellow so it’s obvious.
+- Change keybinds: Ctrl-Q quits; Ctrl-S toggles query mode; update headers and logic.
+
+actions taken
+- Preview overhaul in `actions.py`:
+  - Item basics: Item Type, Item Key, Added, Modified, Date, Title.
+  - Creators by role (Author, Editor, etc.) and plain Authors line remains.
+  - Tags list and Collections paths.
+  - All fields section: dumps every `fields.fieldName: value` for the item.
+  - DOI, URL, Abstract retained and organized.
+  - Missing attachments are annotated as [missing] in bright yellow using ANSI: [\x1b[93mmissing\x1b[0m].
+- Keybind updates:
+  - Ctrl-S now toggles the query mode (All <-> Query).
+  - Ctrl-Q now quits immediately.
+  - Headers and expect keys updated across All/Collections/Query UIs.
+- Opening fixes retained:
+  - Uses subprocess without shell to correctly open PDFs with spaces/parentheses.
+  - Guards against missing paths and prints “Attachment missing.”
+- Docs:
+  - README updated with new keybinds and preview fields.
+
+quick verify
+- Unit tests: PASS (2/2).
+- No lint/type errors in edited Python files.
+
+try it
+- Run zotero-tui and select any item.
+- Preview pane now shows:
+  - Title, Item Type, Authors, Date, Item Key, Citekey, Added/Modified
+  - DOI, URL, Creators (by role), Tags, Collections, All fields, Attachments, Abstract
+- Missing attachment entries show “[missing]” in bright yellow.
+- Keybinds:
+  - Ctrl-S toggles query mode.
+  - Ctrl-Q quits the app.
+
+notes
+- If you want even more (e.g., related items, notes text), say the word and I’ll add them.
+- The “All fields” section reflects everything in `itemData`; if it’s too verbose, we can filter or collapse.
+
+---
+
+_**User**_
+
+we might filter,  but let's try having the TUI take up the whole window, maybe I can see everything for the info heavy entries
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

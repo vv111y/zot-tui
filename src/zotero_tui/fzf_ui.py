@@ -8,11 +8,13 @@ from pyfzf.pyfzf import FzfPrompt
 
 
 def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None, header: Optional[str] = None) -> str:
-    tokens: List[str] = ["--ansi", "--multi", "--height", "80%", "--border", "--layout=reverse"]
+    # Full-screen height to maximize space for heavy previews
+    tokens: List[str] = ["--ansi", "--multi", "--height", "100%", "--border", "--layout=reverse"]
     if preview_command:
         # Quote the preview command so fzf treats it as one argument
         tokens += ["--preview", shlex.quote(preview_command)]
-        tokens += ["--preview-window", "right:60%:wrap"]
+        # Widen preview to show more metadata
+        tokens += ["--preview-window", "right:70%:wrap"]
     if expect_keys:
         tokens += [f"--expect={','.join(expect_keys)}"]
     if header:
