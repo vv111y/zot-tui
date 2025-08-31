@@ -1214,6 +1214,35 @@ that's ok, update readme
 _**Assistant**_
 
 
+```
+
+```
+
+```
+
+```
+Got it—README updated to document:
+- Enter opens a full-page view (bat/less) of the entire entry
+- Bright yellow [missing] attachment marker
+- Full keybindings with Ctrl-S (query), Ctrl-Q (quit), etc.
+- Cleaned up list indentation and tabs in Usage
+
+If you want a “toggle preview width” or “always use less” option, I can add an env var or flag next.
+
+---
+
+_**User**_
+
+no thanks
+working quit well
+
+abstract is displayed twice, since it is still in the all fields section
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

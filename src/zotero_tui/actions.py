@@ -203,7 +203,10 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
         lines.append("  - (none)")
     lines += ["", "All fields:"]
     if field_rows:
+        excluded = {"abstractNote"}
         for name, val in field_rows:
+            if name in excluded:
+                continue
             lines.append(f"  - {name}: {val}")
     else:
         lines.append("  - (none)")
