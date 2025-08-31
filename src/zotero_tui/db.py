@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+import os
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
@@ -148,24 +149,36 @@ def fetch_attachments_for_item(con: sqlite3.Connection, item_id: int) -> List[st
 
 
 def _normalize_attachment_path(con: sqlite3.Connection, path: str) -> str:
-    # Zotero often uses 'attachments:' scheme; map it under dataDir/storage
-    # Get Zotero data dir by looking at the DB file path and going up to its parent
+    # Expand user home and env vars early
+    path = os.path.expandvars(os.path.expanduser(path))
+
+    # Absolute path already? return as-is
+    if Path(path).is_absolute():
+        return path
+
+    scheme_split = path.split(":", 1)
+    scheme = scheme_split[0] if len(scheme_split) == 2 else None
+    remainder = scheme_split[1] if len(scheme_split) == 2 else path
+
+    # Resolve Zotero data dir by DB location
+    data_dir: Optional[Path] = None
     try:
         cur = con.cursor()
         cur.execute("PRAGMA database_list;")
         rows = cur.fetchall()
-        main_file = None
         for _, name, file in rows:
-            if name == "main":
-                main_file = file
+            if name == "main" and file:
+                data_dir = Path(file).parent
                 break
-        if main_file:
-            db_path = Path(main_file)
-            data_dir = db_path.parent
-            if path.startswith("attachments:"):
-                rel = path.split(":", 1)[1]
-                storage = data_dir / "storage" / rel
-                return str(storage)
     except Exception:
-        pass
+        data_dir = None
+
+    if scheme in {"storage", "attachments"} and data_dir is not None:
+        return str((data_dir / "storage" / remainder).resolve())
+
+    # Fallback: if we have a data_dir, try joining remainder under it
+    if data_dir is not None:
+        return str((data_dir / remainder).resolve())
+
+    # Last resort: return original (expanded) string
     return path

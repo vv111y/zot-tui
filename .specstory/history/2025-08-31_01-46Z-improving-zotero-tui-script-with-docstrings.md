@@ -367,6 +367,94 @@ yes
 
 _**Assistant**_
 
+I'll add a metadata search workflow and supporting utils, update the CLI and docs, add a small unit test, run tests, and commit the changes. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Moving ahead, I added metadata search and wired it into the CLI with preview and Ctrl-O, plus tests and docs.
+
+Checklist
+- Metadata search workflow: search title/author substrings
+- Preview pane + Ctrl-O works for metadata search too
+- CLI command and docs updated
+- Unit tests added and passing
+- Commit changes
+
+## actions taken
+
+- New utility
+  - src/zotero_tui/utils.py: helper to parse item IDs from fzf lines
+- Database query
+  - search_items_by_title_or_author: simple LIKE over titles and creators
+- Workflow
+  - actions.workflow_search_metadata: preview + Ctrl-O open
+- CLI
+  - zotero-tui search "query" — new command
+- Docs
+  - README updated with search usage
+- Tests
+  - `test_db_paths.py` (existing): collection path builder
+  - tests/test_utils.py: item ID parsing
+  - Tests pass (2 passed)
+- Commits
+  - feat: add metadata search (title/author), CLI command, preview integration; tests and docs updated
+
+Try it
+- Whole library: zotero-tui all
+- By collection: zotero-tui by-collection
+- Metadata search: zotero-tui search "author or title substring"
+- If auto-detect fails, set ZOTERO_SQLITE to your zotero.sqlite.
+
+Notes
+- Ctrl-O opens the first attachment; normalization maps attachments:… to Zotero’s storage directory when possible.
+- GitHub Actions added previously; set PYPI_API_TOKEN secret before tagging to publish.
+
+Next steps
+- Expand metadata fields (year/type), and allow filtering flags (e.g., --author, --title, --year)
+- More robust attachment path schemes and platform support
+- Add more tests for SQL paths with a small fixture DB
+- Push to GitHub and configure Actions; tag a release when ready
+
+Want me to add author/year filters and a minimal fixture DB for richer tests next?
+
+---
+
+_**User**_
+
+keep going
+
+---
+
+_**Assistant**_
+
 
 
 ---

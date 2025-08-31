@@ -5,7 +5,7 @@ fzf-powered TUI for browsing Zotero collections and opening PDFs.
 Features (initial):
 - Search whole library by title with preview
 - Search by collection, then title with preview
-- Ctrl-O to open the first attachment (macOS `open`)
+- Ctrl-O to open the first attachment; Alt-O to choose among multiple
 
 Install (local dev):
 - pipx install .

@@ -21,12 +21,12 @@ This file tracks plan and progress. Keep updated as we implement.
 - [x] By-collection workflow with preview and Ctrl-O
 - [x] Add README and this TODO
 - [ ] Improve Zotero DB auto-detection across OSes
-- [ ] Robust handling of Zotero storage paths (attachments:... -> absolute path)
+- [x] Robust handling of Zotero storage paths (attachments:/storage: -> absolute path)
 - [ ] Add author/metadata search
 - [ ] Add tests (unit for path builders, SQL queries guarded by fixtures)
 - [x] Add GitHub Actions: lint/tests (CI)
 - [x] Add GitHub Actions: publish on tags (requires PYPI_API_TOKEN secret)
-- [ ] Package docs and usage examples
+- [ ] Package docs and usage examples (add Alt-O docs and platform notes)
 - [ ] Migrate any useful logic from `zot-tui.py`, then remove it
 
 ## Notes

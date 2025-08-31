@@ -87,16 +87,21 @@ def workflow_whole_library(con) -> Optional[int]:
     # The script will parse the [itemID] from the selected line.
     preview_cmd = "zotero-tui preview --line {}"
 
-    key, selection = prompt(lines, preview_command=preview_cmd, expect_keys=["enter", "ctrl-o"])  # ctrl-o to open
+    key, selection = prompt(lines, preview_command=preview_cmd, expect_keys=["enter", "ctrl-o", "alt-o"])  # ctrl/alt-o to open
     if not selection:
         return None
     chosen_line = selection[0]
     item_id = id_by_line[chosen_line]
-    # If ctrl-o pressed, try to open first attachment
-    if key == "ctrl-o":
+    # If open key pressed, open attachments
+    if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)
         if atts:
-            _open_path_mac(atts[0])
+            if key == "alt-o" and len(atts) > 1:
+                _, choose = prompt(atts)
+                if choose:
+                    _open_path_mac(choose[0])
+            else:
+                _open_path_mac(atts[0])
     return item_id
 
 
@@ -128,20 +133,40 @@ def workflow_by_collection(con) -> Optional[int]:
     # Reuse the same preview command
     preview_cmd = "zotero-tui preview --line {}"
 
-    key, item_sel = prompt(item_lines, preview_command=preview_cmd, expect_keys=["enter", "ctrl-o"])
+    key, item_sel = prompt(item_lines, preview_command=preview_cmd, expect_keys=["enter", "ctrl-o", "alt-o"]) 
     if not item_sel:
         return None
     chosen_item_id = item_id_by_line[item_sel[0]]
-    if key == "ctrl-o":
+    if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, chosen_item_id)
         if atts:
-            _open_path_mac(atts[0])
+            if key == "alt-o" and len(atts) > 1:
+                _, choose = prompt(atts)
+                if choose:
+                    _open_path_mac(choose[0])
+            else:
+                _open_path_mac(atts[0])
     return chosen_item_id
 
 
 def _open_path_mac(path: str) -> None:
-    # Best effort: if it's a zotero storage URI like attachments:abc.pdf, just hand off to 'open'
-    os.system(f"open {Path(path).as_posix()!s}")
+    # Cross-platform opener
+    p = Path(path).as_posix()
+    if os.name == "posix":
+        # distinguish macOS vs Linux by presence of 'Darwin' in uname
+        try:
+            import platform
+
+            if platform.system() == "Darwin":
+                os.system(f"open {p}")
+            else:
+                os.system(f"xdg-open {p}")
+        except Exception:
+            os.system(f"open {p}")
+    elif os.name == "nt":
+        os.system(f'start "" "{p}"')
+    else:
+        os.system(f"open {p}")
 
 
 def workflow_search_metadata(con, query: str) -> Optional[int]:
