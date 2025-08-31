@@ -302,6 +302,71 @@ yes
 
 _**Assistant**_
 
+I'll add tests, dev dependencies, and GitHub Actions workflows for CI and PyPI publishing, update the TODO, and commit the changes. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Nice—continuing from here, I set up tests and CI, wired a publish workflow, and committed the changes.
+
+Checklist
+- Add tests and dev deps
+- Add CI (lint + tests)
+- Add PyPI publish workflow
+- Update TODO and commit
+
+## actions taken
+
+- `pyproject.toml`
+  - Added optional-deps [test]: pytest, ruff
+- tests
+  - tests/test_db_paths.py: unit test for collection path building
+- GitHub Actions
+  - .github/workflows/ci.yml: runs ruff and pytest on pushes/PRs to master
+  - .github/workflows/publish.yml: builds and publishes on tags v*.*.* using PYPI_API_TOKEN
+- `TODO.md`
+  - Marked CI and publish workflows as added; noted the required secret
+- Commits
+  - ci: add ruff/pytest CI and PyPI publish workflow; add tests and extras
+
+## next steps
+
+- Add more tests (DB queries via small fixtures)
+- Implement metadata search (author, year) and wire new commands
+- Improve attachment path handling for more schemes
+- Add docs examples and troubleshooting
+- Create GitHub repo, set PYPI_API_TOKEN secret, and push:
+  - git remote add origin <your-remote-url>
+  - git push -u origin master
+  - To release: bump version in pyproject, tag and push tag (e.g., v0.1.1)
+
+Want me to implement author search and a small test fixture next?
+
+---
+
+_**User**_
+
+yes
+
+---
+
+_**Assistant**_
+
 
 
 ---

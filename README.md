@@ -13,6 +13,7 @@ Install (local dev):
 Usage:
 - zotero-tui all
 - zotero-tui by-collection
+- zotero-tui search "author or title substring"
 
 Environment:
 - Set `ZOTERO_SQLITE` to the path of your `zotero.sqlite` if auto-detection fails.

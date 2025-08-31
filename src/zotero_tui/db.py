@@ -89,6 +89,39 @@ def fetch_items_fulltext(con: sqlite3.Connection) -> List[Tuple[int, str]]:
     return [(r[0], r[1]) for r in cur.fetchall()]
 
 
+def search_items_by_title_or_author(con: sqlite3.Connection, q: str) -> List[Tuple[int, str]]:
+    """Search items by title or author substring (case-insensitive).
+
+    This performs a simple LIKE match on title (fieldID=110) and on creators' names.
+    Returns unique (itemID, display_title) rows.
+    """
+    cur = con.cursor()
+    like = f"%{q}%"
+    cur.execute(
+        """
+        WITH titles AS (
+            SELECT d.itemID AS itemID, v.value AS title
+            FROM itemData d
+            JOIN itemDataValues v ON v.valueID = d.valueID
+            WHERE d.fieldID = 110
+        ),
+        creators_join AS (
+            SELECT ic.itemID, c.lastName || ', ' || COALESCE(c.firstName,'') AS name
+            FROM itemCreators ic
+            JOIN creators c ON c.creatorID = ic.creatorID
+        )
+        SELECT DISTINCT t.itemID, t.title
+        FROM titles t
+        LEFT JOIN creators_join cj ON cj.itemID = t.itemID
+        WHERE t.title LIKE ? COLLATE NOCASE
+           OR (cj.name IS NOT NULL AND cj.name LIKE ? COLLATE NOCASE)
+        ORDER BY t.title COLLATE NOCASE
+        """,
+        (like, like),
+    )
+    return [(r[0], r[1]) for r in cur.fetchall()]
+
+
 def fetch_attachments_for_item(con: sqlite3.Connection, item_id: int) -> List[str]:
     """Return file paths for PDF attachments of a given parent item.
 

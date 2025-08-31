@@ -38,6 +38,16 @@ def by_collection(db_path: Optional[str] = typer.Option(None, help="Path to zote
         con.close()
 
 
+@app.command()
+def search(q: str = typer.Argument(..., help="Query substring for title/author"), db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
+    """Search by title/author with preview; Ctrl-O to open first attachment."""
+    con = _connect(db_path)
+    try:
+        actions.workflow_search_metadata(con, q)
+    finally:
+        con.close()
+
+
 @app.command(hidden=True, name="preview")
 def preview(
     db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite"),

@@ -142,3 +142,24 @@ def workflow_by_collection(con) -> Optional[int]:
 def _open_path_mac(path: str) -> None:
     # Best effort: if it's a zotero storage URI like attachments:abc.pdf, just hand off to 'open'
     os.system(f"open {Path(path).as_posix()!s}")
+
+
+def workflow_search_metadata(con, query: str) -> Optional[int]:
+    """Search by title/author substrings with preview; Ctrl-O to open PDF."""
+    items = db.search_items_by_title_or_author(con, query)
+    id_by_line: Dict[str, int] = {}
+    lines: List[str] = []
+    for iid, title in items:
+        line = f"{title} \x1b[90m[{iid}]\x1b[0m"
+        lines.append(line)
+        id_by_line[line] = iid
+
+    key, selection = prompt(lines, preview_command="zotero-tui preview --line {}", expect_keys=["enter", "ctrl-o"])
+    if not selection:
+        return None
+    item_id = id_by_line[selection[0]]
+    if key == "ctrl-o":
+        atts = db.fetch_attachments_for_item(con, item_id)
+        if atts:
+            _open_path_mac(atts[0])
+    return item_id
