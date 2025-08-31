@@ -18,8 +18,7 @@ def _connect(db_path: Optional[str]):
     return con
 
 
-@app.command()
-def run(db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
+def run(db_path: Optional[str] = None):
     """Interactive TUI. Keys: Ctrl-C toggle collections mode, Ctrl-Q toggle query mode, Ctrl-H back to collections list."""
     con = _connect(db_path)
     try:
@@ -51,6 +50,13 @@ def run(db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite"
                 break
     finally:
         con.close()
+
+
+@app.callback(invoke_without_command=True)
+def _default(ctx: typer.Context, db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
+    # If a subcommand (like preview) was invoked, do nothing here
+    if ctx.invoked_subcommand is None:
+        run(db_path)
 
 
 @app.command(hidden=True, name="preview")

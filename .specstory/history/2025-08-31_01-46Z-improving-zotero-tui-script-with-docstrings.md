@@ -772,6 +772,83 @@ then remove the cli sub commands
 _**Assistant**_
 
 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Great idea—I implemented a single interactive flow with keyboard toggles and a back action, and removed reliance on subcommands.
+
+What you asked for
+- Back out to collections list: Ctrl-H in the collection items view
+- Default search is “All”
+- Ctrl-C toggles Collections mode on/off
+- Ctrl-Q toggles Query mode on/off
+- Remove CLI subcommands in favor of a single entrypoint
+
+What I changed
+- New unified TUI loop
+  - Entry: zotero-tui run
+  - Modes:
+    - All: whole-library list + preview
+    - Collections: pick collection, then items; Ctrl-H goes back to collections list
+    - Query: prompt for a substring, list matching items + preview
+  - Key toggles always available in headers:
+    - Ctrl-C: toggle Collections
+    - Ctrl-Q: toggle Query
+    - Ctrl-O / Alt-O: open first or choose attachment
+- fzf headers added to show current mode and hotkeys
+- Subcommands removed from docs; root command now is run
+- pyproject console script points zotero-tui to cli.run
+- Selection parsing hardened (no KeyError on ANSI)
+- fzf options isolated from user env
+
+How to use
+- Install/update in your venv or via pipx:
+  - pipx install --editable .
+- Run:
+  - zotero-tui run
+
+Notes
+- While in a selected collection’s items, press Ctrl-H to go back to the collections list.
+- Press Ctrl-C or Ctrl-Q at any time to toggle modes as requested.
+- Preview still shows metadata; Ctrl-O/Alt-O open attachments.
+
+Want me to add a non-interactive “--query” flag that jumps straight into Query mode with the supplied text, or prefer to keep purely interactive?
+
+---
+
+_**User**_
+
+drop the run command, no sub commands
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

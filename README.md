@@ -12,7 +12,7 @@ Install (local dev):
 
 Usage:
 
-- zotero-tui run
+- zotero-tui
 	- Default mode: All items
 	- Keys:
 		- Ctrl-C: toggle Collections mode
