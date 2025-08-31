@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import re
+import subprocess
 from pathlib import Path
 from typing import List, Optional
 
@@ -13,6 +15,10 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
     """Render a plain-text metadata preview for an item."""
     # Fetch title (field 110) and maybe creators and year
     cur = con.cursor()
+    # Item key
+    cur.execute("SELECT key FROM items WHERE itemID = ?", (item_id,))
+    item_key_row = cur.fetchone()
+    item_key = item_key_row[0] if item_key_row else ""
     cur.execute(
         """
         SELECT v.value AS title
@@ -37,6 +43,34 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
     )
     date_val = cur.fetchone()
     date_val = date_val[0] if date_val else ""
+
+    # Try to locate a citation key (Better BibTeX) if present
+    citekey = ""
+    try:
+        cur.execute(
+            """
+            SELECT v.value, f.fieldName
+            FROM itemData d
+            JOIN itemDataValues v ON v.valueID = d.valueID
+            JOIN fields f ON f.fieldID = d.fieldID
+            WHERE d.itemID = ? AND f.fieldName IN ('citationKey','tex.citekey','extra')
+            """,
+            (item_id,),
+        )
+        rows = cur.fetchall()
+        fieldmap = {name: val for (val, name) in rows}
+        if "citationKey" in fieldmap:
+            citekey = fieldmap["citationKey"].strip()
+        elif "tex.citekey" in fieldmap:
+            citekey = fieldmap["tex.citekey"].strip()
+        elif "extra" in fieldmap:
+            # Heuristics to parse from the Extra field
+            extra = fieldmap["extra"]
+            m = re.search(r"(?:Citation Key|citekey|tex\.citekey)\s*:?\s*(\S+)", extra, re.IGNORECASE)
+            if m:
+                citekey = m.group(1)
+    except Exception:
+        pass
 
     # creators (authors)
     cur.execute(
@@ -63,11 +97,17 @@ def _preview_for_item_sqlite(con, item_id: int) -> str:
         f"Title: {title}",
         f"Authors: {author_str}",
         f"Date: {date_val}",
+        f"Item Key: {item_key}",
+        (f"Citekey: {citekey}" if citekey else "Citekey: -"),
         "",
         "Attachments:",
     ]
     if attachments:
-        lines.extend([f"  - {p}" for p in attachments])
+        for p in attachments:
+            exists = Path(p).exists()
+            mark = "" if exists else " [missing]"
+            suffix = "/" if Path(p).is_dir() else ""
+            lines.append(f"  - {p}{suffix}{mark}")
     else:
         lines.append("  - (none)")
     return "\n".join(lines)
@@ -93,13 +133,16 @@ def workflow_whole_library(con) -> Optional[int]:
     # If open key pressed, open attachments
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)
-        if atts:
-            if key == "alt-o" and len(atts) > 1:
-                _, choose = prompt(atts)
+        existing = [p for p in atts if Path(p).exists()]
+        if existing:
+            if key == "alt-o" and len(existing) > 1:
+                _, choose = prompt(existing, header="Choose attachment to open")
                 if choose:
-                    _open_path_mac(choose[0])
+                    _open_path(choose[0])
             else:
-                _open_path_mac(atts[0])
+                _open_path(existing[0])
+        else:
+            print("Attachment missing")
     return item_id
 
 
@@ -138,18 +181,21 @@ def workflow_by_collection(con) -> Optional[int]:
         return None
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, chosen_item_id)
-        if atts:
-            if key == "alt-o" and len(atts) > 1:
-                _, choose = prompt(atts)
+        existing = [p for p in atts if Path(p).exists()]
+        if existing:
+            if key == "alt-o" and len(existing) > 1:
+                _, choose = prompt(existing, header="Choose attachment to open")
                 if choose:
-                    _open_path_mac(choose[0])
+                    _open_path(choose[0])
             else:
-                _open_path_mac(atts[0])
+                _open_path(existing[0])
+        else:
+            print("Attachment missing")
     return chosen_item_id
 
 
-def _open_path_mac(path: str) -> None:
-    # Cross-platform opener
+def _open_path(path: str) -> None:
+    # Cross-platform opener that avoids shell quoting issues
     p = Path(path)
     # If a directory was given, prefer opening a PDF inside
     if p.is_dir():
@@ -160,25 +206,24 @@ def _open_path_mac(path: str) -> None:
             # prompt to choose
             _, sel = prompt(choices, header="Choose file to open")
             if sel:
-                _open_path_mac(sel[0])
+                _open_path(sel[0])
             return
         # fallthrough: open directory itself
-    p_str = p.as_posix()
+    p_str = str(p)
     if os.name == "posix":
-        # distinguish macOS vs Linux by presence of 'Darwin' in uname
-        try:
-            import platform
-
-            if platform.system() == "Darwin":
-                os.system(f"open {p_str}")
-            else:
-                os.system(f"xdg-open {p_str}")
-        except Exception:
-            os.system(f"open {p_str}")
+        # distinguish macOS vs Linux by platform
+        import platform
+        if platform.system() == "Darwin":
+            subprocess.run(["open", p_str], check=False)
+        else:
+            subprocess.run(["xdg-open", p_str], check=False)
     elif os.name == "nt":
-        os.system(f'start "" "{p_str}"')
+        try:
+            os.startfile(p_str)  # type: ignore[attr-defined]
+        except Exception:
+            subprocess.run(["cmd", "/c", "start", "", p_str], shell=True, check=False)
     else:
-        os.system(f"open {p_str}")
+        subprocess.run(["open", p_str], check=False)
 
 
 def workflow_search_metadata(con, query: str) -> Optional[int]:
@@ -194,8 +239,11 @@ def workflow_search_metadata(con, query: str) -> Optional[int]:
         return None
     if key == "ctrl-o":
         atts = db.fetch_attachments_for_item(con, item_id)
-        if atts:
-            _open_path_mac(atts[0])
+        existing = [p for p in atts if Path(p).exists()]
+        if existing:
+            _open_path(existing[0])
+        else:
+            print("Attachment missing")
     return item_id
 
 
@@ -217,13 +265,16 @@ def ui_all(con) -> tuple[Optional[str], Optional[str]]:
         return key, None
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)
-        if atts:
-            if key == "alt-o" and len(atts) > 1:
-                _, choose = prompt(atts, header="Choose attachment to open")
+        existing = [p for p in atts if Path(p).exists()]
+        if existing:
+            if key == "alt-o" and len(existing) > 1:
+                _, choose = prompt(existing, header="Choose attachment to open")
                 if choose:
-                    _open_path_mac(choose[0])
+                    _open_path(choose[0])
             else:
-                _open_path_mac(atts[0])
+                _open_path(existing[0])
+        else:
+            print("Attachment missing")
     return key, None
 
 
@@ -263,13 +314,16 @@ def ui_by_collection(con) -> tuple[Optional[str], Optional[str]]:
                 return key2, None
             if key2 in ("ctrl-o", "alt-o"):
                 atts = db.fetch_attachments_for_item(con, chosen_item_id)
-                if atts:
-                    if key2 == "alt-o" and len(atts) > 1:
-                        _, choose = prompt(atts, header="Choose attachment to open")
+                existing = [p for p in atts if Path(p).exists()]
+                if existing:
+                    if key2 == "alt-o" and len(existing) > 1:
+                        _, choose = prompt(existing, header="Choose attachment to open")
                         if choose:
-                            _open_path_mac(choose[0])
+                            _open_path(choose[0])
                     else:
-                        _open_path_mac(atts[0])
+                        _open_path(existing[0])
+                else:
+                    print("Attachment missing")
 
             # Return to CLI loop for potential mode toggle handling
             return key2, None
@@ -298,11 +352,12 @@ def ui_query(con) -> tuple[Optional[str], Optional[str]]:
         return key, None
     if key in ("ctrl-o", "alt-o"):
         atts = db.fetch_attachments_for_item(con, item_id)
-        if atts:
-            if key == "alt-o" and len(atts) > 1:
-                _, choose = prompt(atts, header="Choose attachment to open")
+        existing = [p for p in atts if Path(p).exists()]
+        if existing:
+            if key == "alt-o" and len(existing) > 1:
+                _, choose = prompt(existing, header="Choose attachment to open")
                 if choose:
-                    _open_path_mac(choose[0])
+                    _open_path(choose[0])
             else:
-                _open_path_mac(atts[0])
+                _open_path(existing[0])
     return key, None

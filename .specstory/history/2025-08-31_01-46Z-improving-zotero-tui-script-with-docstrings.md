@@ -899,6 +899,54 @@ _**Assistant**_
 
 ```
 
+```
+
+```
+Thanks for the details. I updated attachment resolution and open behavior so Ctrl-O/Alt-O should work with Zotero’s storage layout.
+
+What I fixed
+- Resolve attachments using Zotero item keys:
+  - Query now fetches each attachment’s item key alongside its path.
+  - If the path is:
+    - Absolute: use it (even if missing, we still show it).
+    - storage:filename or attachments:filename: map to ~/Zotero/storage/<attachmentKey>/filename.
+    - key/filename: map to ~/Zotero/storage/key/filename.
+    - filename only: map to ~/Zotero/storage/<attachmentKey>/filename.
+    - Empty: list files inside ~/Zotero/storage/<attachmentKey>, preferring PDFs first.
+- Open behavior
+  - If we select a directory, we show a quick picker for files inside that directory, preferring PDFs first.
+  - Cross-platform opener maintained (open, xdg-open, start).
+- Keeps candidates even if missing, so you can see what it tried to open.
+
+How this matches Zotero
+- Zotero stores attachments under ~/Zotero/storage/<KEY>/.
+- When there’s no explicit path, or it uses the storage schemes, we now resolve to that folder and list contents.
+
+Try it
+- In any list, Ctrl-O opens the first resolved file, Alt-O lets you choose among multiple attachments.
+- If a candidate refers to the storage directory itself, you’ll get a file chooser for that directory before opening.
+
+If you have a sample item that still doesn’t open, copy its storage key and I’ll refine the path logic quickly.
+
+---
+
+_**User**_
+
+opening a .html attachment worked, but not pdf
+also, there are errors as the db may have an entry for the attachment, but it does not exist. we have to do file checks and return "attachment missing"
+
+note: you are not displaying all the metadata, including bib keys
+
+for a confirmed existing pdf I tried opening:
+sh: -c: line 0: syntax error near unexpected token `('
+sh: -c: line 0: `open /Users/will/Zotero/storage/3U7FBVFS/Taleb - 2018 - (Anti)Fragility and Convex Responses in Medicine.pdf'
+
+
+---
+
+_**Assistant**_
+
+
 
 ---
 
