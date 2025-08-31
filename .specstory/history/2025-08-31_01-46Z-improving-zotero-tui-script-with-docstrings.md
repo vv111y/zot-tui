@@ -97,6 +97,110 @@ go ahead and setup a plan based on your analysis, my additions; lay it out in a 
 
 _**Assistant**_
 
+I'll set up a proper Python package with CLI using Typer, implement the fzf workflows with preview and PDF open hotkey, add a todo.md and README, and initialize git with an initial commit. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+I'm going to add a helper function to get the SQLite DB path from a connection, implement a separate preview console script for fzf, fix syntax issues in actions, and create a CLI with Typer. Then I'll add README and TODO, initialize git, and commit. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+I'll replace the legacy `zot-tui.py` with a minimal deprecation stub and add a .gitignore, then initialize git, verify imports, and make an initial commit. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+I'm going to fix the CLI preview to accept the current line from fzf, add path normalization for Zotero storage URIs, and wire that into the open-PDF hotkey. Then I'll run a quick static check on the new Python files, add a .gitignore, initialize git, and make the initial commit. 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+[object Object]
+
+---
+
+_**User**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Assistant**_
+
 
 
 ---
