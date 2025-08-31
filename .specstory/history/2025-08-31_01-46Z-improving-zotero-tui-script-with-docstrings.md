@@ -1170,6 +1170,50 @@ better
 _**Assistant**_
 
 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+On it—two tweaks coming: move Abstract near the top of the preview and make Enter open a full-page view.
+
+What I changed
+- Abstract earlier: The preview now shows Abstract right after URL for quick reading.
+- Enter to page: Pressing Enter on any item opens a full-page view of the entire entry.
+  - Uses bat (or batcat) with paging when available, otherwise falls back to your $PAGER or less -R.
+  - ANSI colors (like the bright yellow [missing]) are preserved.
+
+Where
+- `actions.py`
+  - Preview ordering updated: Title, Item Type, Authors, Date, Item Key, Citekey, Added/Modified, DOI, URL, Abstract, Creators, Tags, Collections, All fields, Attachments.
+  - New _page_text helper invokes bat/less and keeps colors.
+  - Wired Enter in All, Collections, and Query flows to page the full details.
+
+Notes
+- You can still Ctrl-O/Alt-O to open attachments; Ctrl-S toggles query; Ctrl-Q quits.
+- If you want the pager to always use less even when bat is installed, I can add a flag or env switch.
+
+---
+
+_**User**_
+
+that's ok, update readme
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

@@ -8,6 +8,8 @@ Features (initial):
 - Search by collection, then title with preview
 - Ctrl-O to open the first attachment; Alt-O to choose among multiple
 - Preview shows title, authors, date, item key, citation key, DOI, URL, and abstract
+- Press Enter to open a full-page view (paged via bat/less) of the entire entry
+- Missing attachments are highlighted as [missing] in bright yellow
 
 Install (local dev):
 
@@ -18,6 +20,7 @@ Usage:
 - zotero-tui
 	- Default mode: All items
 	- Keys:
+		- Enter: full-page view of selected entry (bat/less)
 		- Ctrl-C: toggle Collections mode
 		- Ctrl-S: toggle Query mode
 		- Ctrl-Q: quit
