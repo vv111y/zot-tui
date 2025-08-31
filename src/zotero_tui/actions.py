@@ -150,22 +150,35 @@ def workflow_by_collection(con) -> Optional[int]:
 
 def _open_path_mac(path: str) -> None:
     # Cross-platform opener
-    p = Path(path).as_posix()
+    p = Path(path)
+    # If a directory was given, prefer opening a PDF inside
+    if p.is_dir():
+        pdfs = sorted([x for x in p.iterdir() if x.is_file() and x.suffix.lower() == ".pdf"])
+        others = sorted([x for x in p.iterdir() if x.is_file() and x.suffix.lower() != ".pdf"])
+        choices = [str(x) for x in (pdfs + others)]
+        if choices:
+            # prompt to choose
+            _, sel = prompt(choices, header="Choose file to open")
+            if sel:
+                _open_path_mac(sel[0])
+            return
+        # fallthrough: open directory itself
+    p_str = p.as_posix()
     if os.name == "posix":
         # distinguish macOS vs Linux by presence of 'Darwin' in uname
         try:
             import platform
 
             if platform.system() == "Darwin":
-                os.system(f"open {p}")
+                os.system(f"open {p_str}")
             else:
-                os.system(f"xdg-open {p}")
+                os.system(f"xdg-open {p_str}")
         except Exception:
-            os.system(f"open {p}")
+            os.system(f"open {p_str}")
     elif os.name == "nt":
-        os.system(f'start "" "{p}"')
+        os.system(f'start "" "{p_str}"')
     else:
-        os.system(f"open {p}")
+        os.system(f"open {p_str}")
 
 
 def workflow_search_metadata(con, query: str) -> Optional[int]:

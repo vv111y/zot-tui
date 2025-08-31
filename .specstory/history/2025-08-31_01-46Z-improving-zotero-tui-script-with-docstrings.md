@@ -849,6 +849,56 @@ drop the run command, no sub commands
 _**Assistant**_
 
 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+Done. The interactive TUI is now the default with no subcommands.
+
+Changes
+- Console script `zotero-tui` launches the interactive app directly.
+- A Typer callback runs the TUI when no subcommand is provided.
+- README updated to show just “zotero-tui”.
+- Tests still pass.
+
+How to use
+- Run: zotero-tui
+- Keys:
+  - Ctrl-C: toggle Collections mode
+  - Ctrl-Q: toggle Query mode
+  - Ctrl-H: back to Collections list
+  - Ctrl-O: open first attachment; Alt-O: choose attachment
+
+I kept the hidden `preview` helper for the fzf preview pane.
+
+---
+
+_**User**_
+
+pretty good,
+
+these don't work:
+Ctrl-O: open first attachment; Alt-O: choose attachment
+
+You need to know the db structure. Zotero puts files in ~/Zotero/storage with subdirs like: 2JJ9YXMI
+~/Zotero/storage/2JJ9YXMI/
+
+---
+
+_**Assistant**_
+
+
+```
+
+```
+
 
 ---
 

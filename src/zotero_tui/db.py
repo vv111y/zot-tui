@@ -124,28 +124,93 @@ def search_items_by_title_or_author(con: sqlite3.Connection, q: str) -> List[Tup
 
 
 def fetch_attachments_for_item(con: sqlite3.Connection, item_id: int) -> List[str]:
-    """Return file paths for PDF attachments of a given parent item.
+    """Return resolved file paths for attachments of a parent item.
 
-    This uses itemAttachments, items, and itemData to retrieve local file paths.
-    Zotero stores paths like 'attachments:xyz.pdf' or absolute paths in itemAttachments.path.
+    Resolution rules:
+    - Absolute paths are returned as-is (if they exist)
+    - 'storage:filename.pdf' or 'attachments:filename.pdf' => dataDir/storage/<attachmentKey>/filename.pdf
+    - 'key/filename.pdf' => dataDir/storage/key/filename.pdf
+    - 'filename.pdf' (no slash) => dataDir/storage/<attachmentKey>/filename.pdf
+    - Empty path => list files under dataDir/storage/<attachmentKey>
     """
     cur = con.cursor()
-    # itemAttachments contains child items (attachments) referencing parent item
     cur.execute(
         """
-        SELECT ia.path
+        SELECT ia.path, i.key
         FROM itemAttachments ia
         JOIN items i ON i.itemID = ia.itemID
         WHERE ia.parentItemID = ?
         """,
         (item_id,),
     )
-    paths = []
-    for (p,) in cur.fetchall():
-        if not p:
+    rows = cur.fetchall()
+
+    # Determine Zotero data directory from DB path
+    data_dir: Optional[Path] = None
+    try:
+        cur.execute("PRAGMA database_list;")
+        for _, name, file in cur.fetchall():
+            if name == "main" and file:
+                data_dir = Path(file).parent
+                break
+    except Exception:
+        data_dir = None
+
+    resolved: List[str] = []
+    for p, akey in rows:
+        p = (p or "").strip()
+        # Expand env and user
+        if p:
+            p = os.path.expandvars(os.path.expanduser(p))
+        # Absolute linked files
+        if p and Path(p).is_absolute():
+            if Path(p).exists():
+                resolved.append(p)
+            else:
+                resolved.append(p)  # keep even if missing; user can see it
             continue
-        paths.append(_normalize_attachment_path(con, p))
-    return paths
+
+        # Need data_dir to build storage paths
+        if data_dir is None:
+            if p:
+                resolved.append(p)
+            continue
+
+        storage_root = data_dir / "storage"
+        cand: Optional[Path] = None
+
+        if p.startswith("storage:") or p.startswith("attachments:"):
+            rel = p.split(":", 1)[1]
+            if akey:
+                cand = storage_root / akey / rel
+            else:
+                cand = storage_root / rel
+        elif "/" in p or os.sep in p:
+            # Could already include the key as first path segment
+            cand = storage_root / p
+        else:
+            # just a filename
+            if akey:
+                cand = storage_root / akey / p
+
+        if cand is not None:
+            if cand.exists():
+                resolved.append(str(cand))
+            else:
+                # keep candidate string even if missing; may still open
+                resolved.append(str(cand))
+            continue
+
+        # If no path or couldn't resolve, list directory under key
+        if akey:
+            key_dir = storage_root / akey
+            if key_dir.is_dir():
+                # Prefer PDFs first
+                pdfs = sorted([str(pth) for pth in key_dir.iterdir() if pth.is_file() and pth.suffix.lower() == ".pdf"])
+                others = sorted([str(pth) for pth in key_dir.iterdir() if pth.is_file() and pth.suffix.lower() != ".pdf"])
+                resolved.extend(pdfs + others)
+
+    return resolved
 
 
 def _normalize_attachment_path(con: sqlite3.Connection, path: str) -> str:
