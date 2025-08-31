@@ -19,31 +19,36 @@ def _connect(db_path: Optional[str]):
 
 
 @app.command()
-def all(db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
-    """Search whole library by title with preview; Ctrl-O to open first attachment."""
+def run(db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
+    """Interactive TUI. Keys: Ctrl-C toggle collections mode, Ctrl-Q toggle query mode, Ctrl-H back to collections list."""
     con = _connect(db_path)
     try:
-        actions.workflow_whole_library(con)
-    finally:
-        con.close()
+        mode = "all"  # all | by-collection | search
+        while True:
+            if mode == "all":
+                key, next_mode = actions.ui_all(con)
+            elif mode == "by-collection":
+                key, next_mode = actions.ui_by_collection(con)
+            else:  # search
+                key, next_mode = actions.ui_query(con)
 
+            # next_mode can explicitly switch modes
+            if next_mode:
+                mode = next_mode
+                continue
 
-@app.command()
-def by_collection(db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
-    """Pick a collection then search titles in it; Ctrl-O opens first attachment."""
-    con = _connect(db_path)
-    try:
-        actions.workflow_by_collection(con)
-    finally:
-        con.close()
+            # Ctrl-C toggles collections mode on/off
+            if key == "ctrl-c":
+                mode = "by-collection" if mode != "by-collection" else "all"
+                continue
+            # Ctrl-Q toggles query mode on/off
+            if key == "ctrl-q":
+                mode = "search" if mode != "search" else "all"
+                continue
 
-
-@app.command()
-def search(q: str = typer.Argument(..., help="Query substring for title/author"), db_path: Optional[str] = typer.Option(None, help="Path to zotero.sqlite")):
-    """Search by title/author with preview; Ctrl-O to open first attachment."""
-    con = _connect(db_path)
-    try:
-        actions.workflow_search_metadata(con, q)
+            # Exit if no selection and no key
+            if key is None:
+                break
     finally:
         con.close()
 

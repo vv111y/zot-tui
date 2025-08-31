@@ -184,3 +184,112 @@ def workflow_search_metadata(con, query: str) -> Optional[int]:
         if atts:
             _open_path_mac(atts[0])
     return item_id
+
+
+# UI loops returning (key, next_mode)
+def ui_all(con) -> tuple[Optional[str], Optional[str]]:
+    items = db.fetch_items_fulltext(con)
+    lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
+    header = "Mode: All  |  Ctrl-C: Collections  Ctrl-Q: Query  Ctrl-O: Open  Alt-O: Choose"
+    key, selection = prompt(
+        lines,
+        preview_command="zotero-tui preview --line {}",
+        expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-c", "ctrl-q"],
+        header=header,
+    )
+    if not selection:
+        return key, None
+    item_id = parse_item_id_from_line(selection[0])
+    if item_id is None:
+        return key, None
+    if key in ("ctrl-o", "alt-o"):
+        atts = db.fetch_attachments_for_item(con, item_id)
+        if atts:
+            if key == "alt-o" and len(atts) > 1:
+                _, choose = prompt(atts, header="Choose attachment to open")
+                if choose:
+                    _open_path_mac(choose[0])
+            else:
+                _open_path_mac(atts[0])
+    return key, None
+
+
+def ui_by_collection(con) -> tuple[Optional[str], Optional[str]]:
+    while True:
+        colls = db.fetch_collections(con)
+        col_lines: List[str] = []
+        for c in colls:
+            path = db.build_collection_path(c, colls)
+            col_lines.append(f"{path} \x1b[90m[{c.id}]\x1b[0m")
+        header = "Mode: Collections  |  Ctrl-C: All  Ctrl-Q: Query  Enter: Select Collection"
+        key, sel = prompt(col_lines, expect_keys=["enter", "ctrl-c", "ctrl-q"], header=header)
+        if not sel:
+            return key, None
+        chosen_coll_id = parse_item_id_from_line(sel[0])
+        if chosen_coll_id is None:
+            return key, None
+
+        # Items in collection
+        while True:
+            items = db.fetch_item_titles_in_collection(con, chosen_coll_id)
+            item_lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
+            header_items = "Mode: Collection Items  |  Ctrl-H: Back to Collections  Ctrl-C: All  Ctrl-Q: Query"
+            key2, item_sel = prompt(
+                item_lines,
+                preview_command="zotero-tui preview --line {}",
+                expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-h", "ctrl-c", "ctrl-q"],
+                header=header_items,
+            )
+            if not item_sel:
+                return key2, None
+            if key2 == "ctrl-h":
+                break  # back to collections list
+
+            chosen_item_id = parse_item_id_from_line(item_sel[0])
+            if chosen_item_id is None:
+                return key2, None
+            if key2 in ("ctrl-o", "alt-o"):
+                atts = db.fetch_attachments_for_item(con, chosen_item_id)
+                if atts:
+                    if key2 == "alt-o" and len(atts) > 1:
+                        _, choose = prompt(atts, header="Choose attachment to open")
+                        if choose:
+                            _open_path_mac(choose[0])
+                    else:
+                        _open_path_mac(atts[0])
+
+            # Return to CLI loop for potential mode toggle handling
+            return key2, None
+
+
+def ui_query(con) -> tuple[Optional[str], Optional[str]]:
+    try:
+        query = input("Query (title/author): ").strip()
+    except EOFError:
+        return None, None
+    if not query:
+        return None, None
+    items = db.search_items_by_title_or_author(con, query)
+    lines: List[str] = [f"{title} \x1b[90m[{iid}]\x1b[0m" for iid, title in items]
+    header = "Mode: Query  |  Ctrl-C: Collections  Ctrl-Q: All  Ctrl-O: Open  Alt-O: Choose"
+    key, selection = prompt(
+        lines,
+        preview_command="zotero-tui preview --line {}",
+        expect_keys=["enter", "ctrl-o", "alt-o", "ctrl-c", "ctrl-q"],
+        header=header,
+    )
+    if not selection:
+        return key, None
+    item_id = parse_item_id_from_line(selection[0])
+    if item_id is None:
+        return key, None
+    if key in ("ctrl-o", "alt-o"):
+        atts = db.fetch_attachments_for_item(con, item_id)
+        if atts:
+            if key == "alt-o" and len(atts) > 1:
+                _, choose = prompt(atts, header="Choose attachment to open")
+                if choose:
+                    _open_path_mac(choose[0])
+            else:
+                _open_path_mac(atts[0])
+    return key, None

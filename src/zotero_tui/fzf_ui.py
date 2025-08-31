@@ -7,7 +7,7 @@ from typing import List, Optional, Sequence, Tuple
 from pyfzf.pyfzf import FzfPrompt
 
 
-def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> str:
+def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None, header: Optional[str] = None) -> str:
     tokens: List[str] = ["--ansi", "--multi", "--height", "80%", "--border", "--layout=reverse"]
     if preview_command:
         # Quote the preview command so fzf treats it as one argument
@@ -15,17 +15,19 @@ def _build_fzf_options(preview_command: Optional[str] = None, expect_keys: Optio
         tokens += ["--preview-window", "right:60%:wrap"]
     if expect_keys:
         tokens += [f"--expect={','.join(expect_keys)}"]
+    if header:
+        tokens += ["--header", shlex.quote(header)]
     return " ".join(tokens)
 
 
-def prompt(entries: Sequence[str], preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None) -> Tuple[Optional[str], List[str]]:
+def prompt(entries: Sequence[str], preview_command: Optional[str] = None, expect_keys: Optional[Sequence[str]] = None, header: Optional[str] = None) -> Tuple[Optional[str], List[str]]:
     """Prompt with fzf and optional preview and hotkeys.
 
     Returns a tuple (pressed_key, selected_lines).
     pressed_key is None when Enter was used without --expect.
     """
     fzf = FzfPrompt()
-    options = _build_fzf_options(preview_command=preview_command, expect_keys=expect_keys)
+    options = _build_fzf_options(preview_command=preview_command, expect_keys=expect_keys, header=header)
 
     # Neutralize user's FZF_DEFAULT_OPTS to avoid malformed values affecting our run
     old_env = os.environ.pop("FZF_DEFAULT_OPTS", None)

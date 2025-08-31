@@ -11,11 +11,17 @@ Install (local dev):
 - pipx install .
 
 Usage:
-- zotero-tui all
-- zotero-tui by-collection
-- zotero-tui search "author or title substring"
+
+- zotero-tui run
+	- Default mode: All items
+	- Keys:
+		- Ctrl-C: toggle Collections mode
+		- Ctrl-Q: toggle Query mode
+		- Ctrl-H: back to Collections list when inside a collection
+		- Ctrl-O: open first attachment; Alt-O: choose attachment
 
 Environment:
+
 - Set `ZOTERO_SQLITE` to the path of your `zotero.sqlite` if auto-detection fails.
 
 License: MIT

@@ -732,6 +732,45 @@ I'll update selection handling to parse the ID from the fzf-selected line (strip
 ```
 
 ```
+I fixed the KeyError by removing the brittle “line string -> ID” mapping and parsing the ID from the selected line itself.
+
+What changed
+- Now we extract the [123] suffix from the fzf-selected line using a small util, so:
+  - ANSI color changes or fzf output formatting won’t break lookups
+  - No more Dict lookups on rendered strings
+- Applied to:
+  - by-collection: collection selection and item selection
+  - whole-library and metadata search flows
+
+Why it failed before
+- We built a dict keyed by the exact rendered line. fzf can alter or strip formatting, resulting in a KeyError when that exact string wasn’t present.
+
+Try it again
+- zotero-tui by-collection
+- zotero-tui all
+- zotero-tui search "query"
+
+If you want, I can also show the selected ID in a subtle way or hide it entirely in the display (we read it from the line either way).
+
+---
+
+_**User**_
+
+fixed.
+I want the option to back out of collection search, back to the list of collections for another go.
+perhaps C-h, since we are already using vim style C-j C-k in fzf
+
+and lets go further,
+default search is all
+C-c toggles search by collection, pressing C-c again returns to all search
+C-q toggles search by query
+
+then remove the cli sub commands
+
+---
+
+_**Assistant**_
+
 
 
 ---

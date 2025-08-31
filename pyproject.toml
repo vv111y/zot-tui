@@ -34,7 +34,7 @@ Homepage = "https://github.com/yourname/zotero-tui"
 Repository = "https://github.com/yourname/zotero-tui"
 
 [project.scripts]
-zotero-tui = "zotero_tui.cli:main"
+zotero-tui = "zotero_tui.cli:run"
 zotero-tui-preview = "zotero_tui.cli:preview"
 
 [tool.hatch.build]
