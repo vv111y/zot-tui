@@ -30,8 +30,8 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourname/zotero-tui"
-Repository = "https://github.com/yourname/zotero-tui"
+Homepage = "https://github.com/vv111y/zot-tui"
+Repository = "https://github.com/vv111y/zot-tui"
 
 [project.scripts]
 zotero-tui = "zotero_tui.cli:main"

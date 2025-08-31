@@ -1242,6 +1242,28 @@ abstract is displayed twice, since it is still in the all fields section
 
 _**Assistant**_
 
+I’ll remove the duplicate abstract by excluding 'abstractNote' from the “All fields” section in the preview and commit the change. 
+```
+
+```
+Thanks. I removed the duplicate by excluding abstractNote from the “All fields” section, so Abstract only appears in the top section now.
+
+- Changed in `actions.py`: filter out abstractNote when rendering “All fields”.
+- Tests still pass.
+
+If you spot any other repeats (e.g., DOI/URL), I can exclude those too.
+
+---
+
+_**User**_
+
+looks great
+this is good for a tag and first release
+
+---
+
+_**Assistant**_
+
 
 
 ---
